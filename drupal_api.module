@@ -1,5 +1,6 @@
 <?php
-
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Database\Database;
 /**
  * Implements hook_menu().
  */function drupal_api_menu(){
@@ -23,7 +24,6 @@
     'type' => MENU_CALLBACK,
   );
 
-
   return $items;
 }
 function jobs_page_callback() {
@@ -33,9 +33,9 @@ function jobs_page_callback() {
   $emp_id=$params['employer_id'];//test ID =0/1
   $encodedkey=$params['api_key'];//test 2
 
-  $hasKey = db_select('api_key');
-  $hasKey->addField('api_key', 'api_key');
-  $hasKey->condition('api_key',$encodedkey);
+  $hasKey = db_select('field_data_field_portal_api_key');
+  $hasKey->addField('field_data_field_portal_api_key', 'field_portal_api_key_value');
+  $hasKey->condition('field_portal_api_key_value',$encodedkey);
   $key = $hasKey->execute()->fetchField();
 
   if(isset($emp_id)) {
@@ -87,28 +87,28 @@ function employer_page_callback() {
   $params=drupal_get_query_parameters();
   $encodedkey=$params['api_key'];//test 2
 
-  $hasKey = db_select('api_key');
-  $hasKey->addField('api_key', 'api_key');
-  $hasKey->condition('api_key',$encodedkey);
+  $hasKey = db_select('field_data_field_portal_api_key');
+  $hasKey->addField('field_data_field_portal_api_key', 'field_portal_api_key_value');
+  $hasKey->condition('field_portal_api_key_value',$encodedkey);
   $key = $hasKey->execute()->fetchField();
 
   if($key==$encodedkey) {
 
-  //get ID's relevant to employer- get user ID where role ID is 4
-  $isEmployer = db_select('users_roles');
-  $isEmployer->addField('users_roles', 'uid');
-  $isEmployer->condition('rid', 4);
-  $employerID = $isEmployer->execute()->fetchCol();
+    //get ID's relevant to employer- get user ID where role ID is 4
+    $isEmployer = db_select('users_roles');
+    $isEmployer->addField('users_roles', 'uid');
+    $isEmployer->condition('rid', 4);
+    $employerID = $isEmployer->execute()->fetchCol();
 
-  //get employer Data
-  $query = db_select('users');
-  $query->addField('users', 'uid','uid');
-  $query->addField('users', 'name','name');
-  $query->addField('users', 'mail','mail');
-  $query->addField('users', 'picture','picture');
-  $query->condition('uid', $employerID);
+    //get employer Data
+    $query = db_select('users');
+    $query->addField('users', 'uid','uid');
+    $query->addField('users', 'name','name');
+    $query->addField('users', 'mail','mail');
+    $query->addField('users', 'picture','picture');
+    $query->condition('uid', $employerID);
 
-  $data = $query->execute()->fetchAll();
+    $data = $query->execute()->fetchAll();
     $response = [
       'employers' => []
     ];
@@ -146,9 +146,9 @@ function application_page_callback() {
   $job_id=$params['job_id']; //valid job ID =15939,15884,15870
   $encodedkey=$params['api_key'];//test 2
 
-  $hasKey = db_select('api_key');
-  $hasKey->addField('api_key', 'api_key');
-  $hasKey->condition('api_key',$encodedkey);
+  $hasKey = db_select('field_data_field_portal_api_key');
+  $hasKey->addField('field_data_field_portal_api_key', 'field_portal_api_key_value');
+  $hasKey->condition('field_portal_api_key_value',$encodedkey);
   $key = $hasKey->execute()->fetchField();
 
   if(isset($job_id)) {
@@ -158,6 +158,7 @@ function application_page_callback() {
       $query->addField('webform_submitted_data', 'sid');
       $query->condition('nid', 15); /*Node ID 15 specifies all the submissions related to jobs*/
       $query->condition('data', $job_id);
+      $query->condition('cid', 10);
       $setofsid = $query->execute()->fetchAll();
 
       if ($setofsid) {
@@ -199,15 +200,13 @@ function application_page_callback() {
       return drupal_json_output($results);
     }
     else {
-       http_response_code(401);
+      http_response_code(401);
     }
   }
   else{
-      http_response_code(412);
+    http_response_code(412);
   }
 
 }
-
-
 
 ?>

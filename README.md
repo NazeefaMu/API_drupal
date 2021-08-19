@@ -11,17 +11,17 @@ Display data fetched from drupal site
 
 ## Installing the configuration page
 
--Install config_pages module using the following link.
+- Install config_pages module using the following link.
  Link: (https://ftp.drupal.org/files/projects/config_pages-7.x-1.9.tar.gz)
--After module installed, navigate to "admin/structure/config_pages/types" and click on "Add config page".
--Enter config page title and mount point, for example "admin/config/mysettings" and menu item type.
--Choose context if you need (if for example you want to have different settings for different languages) and save config page.
--Go to "https://drupal8.local/admin/structure/config_pages/types" and find your config page there,
+- After module installed, navigate to "admin/structure/config_pages/types" and click on "Add config page".
+- Enter config page title and mount point, for example "admin/config/mysettings" and menu item type.
+- Choose context if you need (if for example you want to have different settings for different languages) and save config page.
+- Go to "https://drupal8.local/admin/structure/config_pages/types" and find your config page there,
   add following fields.
   1.API KEY (machine name: field_portal_api_key)
   2.Node ID (machine name: field_portal_node_id)
   3.CID (machine name: field_portal_cid)
--The configuration page will appear on the list of configurations to view,insert needed
+- The configuration page will appear on the list of configurations to view,insert needed
  values.
 
 ### Installing the module

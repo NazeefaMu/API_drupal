@@ -1,0 +1,189 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */function drupal_api_menu(){
+  $items=array();
+  $items['api/get-jobs'] = array(
+    'page callback' => 'jobs_page_callback',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['api/get-employers'] = array(
+    'page callback' => 'employer_page_callback',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['api/get-applications'] = array(
+
+    'page callback' => 'application_page_callback',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
+
+  return $items;
+}
+function jobs_page_callback() {
+
+  $results = array();
+  $params=drupal_get_query_parameters();
+  $emp_id=$params['employer_id'];//test ID =0/1
+  $encodedkey=$params['api_key'];//test 2
+
+  $hasKey = db_select('api_key');
+  $hasKey->addField('api_key', 'api_key');
+  $hasKey->condition('api_key',$encodedkey);
+  $key = $hasKey->execute()->fetchField();
+
+  if($key==$encodedkey) {
+
+    // no need to query twise here can get all data by single query
+    //provides a response with all jobs for that particular node id
+    $query = db_select('node', 'n');
+    $query->join('node_expire', 'ne', 'n.nid=ne.nid');
+    $query->addField('n', 'nid', 'nid');
+    $query->addField('n', 'title', 'title');
+    $query->addField('n', 'created', 'created');
+    $query->addField('n', 'status', 'status');
+    $query->addField('ne', 'expire', 'expire');
+    $query->condition('n.uid', $emp_id);
+
+    $data = $query->execute()->fetchAll();
+
+    foreach ($data as $row) {
+
+      $obj = [];
+      $obj['nid'] = $row->nid;
+      $obj['title'] = $row->title;
+      $obj['created'] = $row->created;
+      $obj['status'] = $row->status;
+      $obj['expire'] = $row->expire;
+      $obj['url'] = url("node/$row->nid");
+      array_push($results, $obj);
+
+    }
+
+    return drupal_json_output($results);
+  }
+  else {
+    return drupal_json_output('Undefined');
+
+  }
+
+
+}
+
+
+function employer_page_callback() {
+
+  $params=drupal_get_query_parameters();
+  $encodedkey=$params['api_key'];//test 2
+
+  $hasKey = db_select('api_key');
+  $hasKey->addField('api_key', 'api_key');
+  $hasKey->condition('api_key',$encodedkey);
+  $key = $hasKey->execute()->fetchField();
+
+  if($key==$encodedkey) {
+
+  //get ID's relevant to employer- get user ID where role ID is 4
+  $isEmployer = db_select('users_roles');
+  $isEmployer->addField('users_roles', 'uid');
+  $isEmployer->condition('rid', 4);
+  $employerID = $isEmployer->execute()->fetchCol();
+
+  //get employer Data
+  $query = db_select('users');
+  $query->addField('users', 'uid');
+  $query->addField('users', 'name');
+  $query->addField('users', 'mail');
+  $query->addField('users', 'picture');
+  $query->condition('uid', $employerID);
+
+  $data = $query->execute()->fetchAll();
+  $response = [
+    'employers' => $data
+  ];
+  return drupal_json_output($response);
+  }
+  else
+  {
+    return drupal_json_output('Undefined');
+
+  }
+
+}
+
+
+function application_page_callback() {
+  $results = array();
+  $params=drupal_get_query_parameters();
+  $job_id=$params['job_id']; //valid job ID =15939
+  $encodedkey=$params['api_key'];//test 2
+
+  $hasKey = db_select('api_key');
+  $hasKey->addField('api_key', 'api_key');
+  $hasKey->condition('api_key',$encodedkey);
+  $key = $hasKey->execute()->fetchField();
+
+  if($key==$encodedkey) {
+
+    $query = db_select('webform_submitted_data');
+    $query->addField('webform_submitted_data', 'sid');
+    $query->condition('nid', 15); /*Node ID 15 specifies all the submissions related to jobs*/
+    $query->condition('data', $job_id);
+    $setofsid = $query->execute()->fetchAll();
+
+
+    if ($setofsid) {
+
+      foreach ($setofsid as $sid) {
+
+        $querySubmissions = db_select('webform_submitted_data', 'wsd');
+        $querySubmissions->leftJoin('webform_component', 'wc', 'wsd.cid = wc.cid');
+        $querySubmissions->addField('wsd', 'data');
+        $querySubmissions->addField('wc', 'name');
+        $querySubmissions->condition('sid', $sid->sid);
+        $querySubmissions->groupBy('wsd.data');
+        $result = $querySubmissions->execute()->fetchAll();
+
+        $obj['id'] = $sid->sid;
+
+        foreach ($result as $row) {
+
+          if ($row->name == 'Attach your CV') {
+
+            $file = file_load($row->data);
+
+            $obj[$row->name] = file_create_url($file->uri);
+
+          }
+          else {
+
+            $obj[$row->name] = $row->data;
+
+          }
+
+        }
+
+        array_push($results, $obj);
+
+      }
+    }
+
+    return drupal_json_output($results);
+  }
+  else
+  {
+    return drupal_json_output("Undefined");
+
+  }
+
+}
+
+
+
+?>

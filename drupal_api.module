@@ -38,39 +38,43 @@ function jobs_page_callback() {
   $hasKey->condition('api_key',$encodedkey);
   $key = $hasKey->execute()->fetchField();
 
-  if($key==$encodedkey) {
+  if(isset($emp_id)) {
+    if ($key == $encodedkey) {
 
-    // no need to query twise here can get all data by single query
-    //provides a response with all jobs for that particular node id
-    $query = db_select('node', 'n');
-    $query->join('node_expire', 'ne', 'n.nid=ne.nid');
-    $query->addField('n', 'nid', 'nid');
-    $query->addField('n', 'title', 'title');
-    $query->addField('n', 'created', 'created');
-    $query->addField('n', 'status', 'status');
-    $query->addField('ne', 'expire', 'expire');
-    $query->condition('n.uid', $emp_id);
+      // no need to query twice here can get all data by single query
+      //provides a response with all jobs for that particular node id
+      $query = db_select('node', 'n');
+      $query->join('node_expire', 'ne', 'n.nid=ne.nid');
+      $query->addField('n', 'nid', 'nid');
+      $query->addField('n', 'title', 'title');
+      $query->addField('n', 'created', 'created');
+      $query->addField('n', 'status', 'status');
+      $query->addField('ne', 'expire', 'expire');
+      $query->condition('n.uid', $emp_id);
 
-    $data = $query->execute()->fetchAll();
+      $data = $query->execute()->fetchAll();
 
-    foreach ($data as $row) {
+      foreach ($data as $row) {
 
-      $obj = [];
-      $obj['nid'] = $row->nid;
-      $obj['title'] = $row->title;
-      $obj['created'] = $row->created;
-      $obj['status'] = $row->status;
-      $obj['expire'] = $row->expire;
-      $obj['url'] = url("node/$row->nid");
-      array_push($results, $obj);
+        $obj = [];
+        $obj['nid'] = $row->nid;
+        $obj['title'] = $row->title;
+        $obj['created'] = $row->created;
+        $obj['status'] = $row->status;
+        $obj['expire'] = $row->expire;
+        $obj['url'] = url("node/$row->nid");
+        array_push($results, $obj);
 
+      }
+
+      return drupal_json_output($results);
     }
-
-    return drupal_json_output($results);
+    else {
+      http_response_code(401);
+    }
   }
-  else {
-    return drupal_json_output('Undefined');
-
+  else{
+    http_response_code(412);
   }
 
 
@@ -79,6 +83,7 @@ function jobs_page_callback() {
 
 function employer_page_callback() {
 
+  $results = array();
   $params=drupal_get_query_parameters();
   $encodedkey=$params['api_key'];//test 2
 
@@ -97,21 +102,38 @@ function employer_page_callback() {
 
   //get employer Data
   $query = db_select('users');
-  $query->addField('users', 'uid');
-  $query->addField('users', 'name');
-  $query->addField('users', 'mail');
-  $query->addField('users', 'picture');
+  $query->addField('users', 'uid','uid');
+  $query->addField('users', 'name','name');
+  $query->addField('users', 'mail','mail');
+  $query->addField('users', 'picture','picture');
   $query->condition('uid', $employerID);
 
   $data = $query->execute()->fetchAll();
-  $response = [
-    'employers' => $data
-  ];
-  return drupal_json_output($response);
+    $response = [
+      'employers' => []
+    ];
+
+    foreach ($data as $row) {
+
+      $file = file_load($row->picture);
+      $uri = $file->uri;
+      $url = file_create_url($uri);
+
+      $obj = [];
+      $obj['uid'] = $row->uid;
+      $obj['name'] = $row->name;
+      $obj['mail'] = $row->mail;
+      $obj['picture'] = $url;
+      array_push($response['employers'], $obj);
+
+    }
+
+    return drupal_json_output($response);
   }
   else
   {
-    return drupal_json_output('Undefined');
+
+    http_response_code(401);
 
   }
 
@@ -121,7 +143,7 @@ function employer_page_callback() {
 function application_page_callback() {
   $results = array();
   $params=drupal_get_query_parameters();
-  $job_id=$params['job_id']; //valid job ID =15939
+  $job_id=$params['job_id']; //valid job ID =15939,15884,15870
   $encodedkey=$params['api_key'];//test 2
 
   $hasKey = db_select('api_key');
@@ -129,57 +151,59 @@ function application_page_callback() {
   $hasKey->condition('api_key',$encodedkey);
   $key = $hasKey->execute()->fetchField();
 
-  if($key==$encodedkey) {
+  if(isset($job_id)) {
+    if ($key == $encodedkey) {
 
-    $query = db_select('webform_submitted_data');
-    $query->addField('webform_submitted_data', 'sid');
-    $query->condition('nid', 15); /*Node ID 15 specifies all the submissions related to jobs*/
-    $query->condition('data', $job_id);
-    $setofsid = $query->execute()->fetchAll();
+      $query = db_select('webform_submitted_data');
+      $query->addField('webform_submitted_data', 'sid');
+      $query->condition('nid', 15); /*Node ID 15 specifies all the submissions related to jobs*/
+      $query->condition('data', $job_id);
+      $setofsid = $query->execute()->fetchAll();
 
+      if ($setofsid) {
 
-    if ($setofsid) {
+        foreach ($setofsid as $sid) {
 
-      foreach ($setofsid as $sid) {
+          $querySubmissions = db_select('webform_submitted_data', 'wsd');
+          $querySubmissions->leftJoin('webform_component', 'wc', 'wsd.cid = wc.cid');
+          $querySubmissions->addField('wsd', 'data');
+          $querySubmissions->addField('wc', 'name');
+          $querySubmissions->condition('sid', $sid->sid);
+          $querySubmissions->groupBy('wsd.data');
+          $result = $querySubmissions->execute()->fetchAll();
 
-        $querySubmissions = db_select('webform_submitted_data', 'wsd');
-        $querySubmissions->leftJoin('webform_component', 'wc', 'wsd.cid = wc.cid');
-        $querySubmissions->addField('wsd', 'data');
-        $querySubmissions->addField('wc', 'name');
-        $querySubmissions->condition('sid', $sid->sid);
-        $querySubmissions->groupBy('wsd.data');
-        $result = $querySubmissions->execute()->fetchAll();
+          $obj['id'] = $sid->sid;
 
-        $obj['id'] = $sid->sid;
+          foreach ($result as $row) {
 
-        foreach ($result as $row) {
+            if ($row->name == 'Attach your CV') {
 
-          if ($row->name == 'Attach your CV') {
+              $file = file_load($row->data);
 
-            $file = file_load($row->data);
+              $obj[$row->name] = file_create_url($file->uri);
 
-            $obj[$row->name] = file_create_url($file->uri);
+            }
+            else {
+
+              $obj[$row->name] = $row->data;
+
+            }
 
           }
-          else {
 
-            $obj[$row->name] = $row->data;
-
-          }
+          array_push($results, $obj);
 
         }
-
-        array_push($results, $obj);
-
       }
+
+      return drupal_json_output($results);
     }
-
-    return drupal_json_output($results);
+    else {
+       http_response_code(401);
+    }
   }
-  else
-  {
-    return drupal_json_output("Undefined");
-
+  else{
+      http_response_code(412);
   }
 
 }

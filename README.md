@@ -1,6 +1,7 @@
 # Drupal API for employer dashboard
 
-Fetch data for
+Display data fetched from
+
 ## Getting Started
 
 ##Current Support

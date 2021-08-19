@@ -1,5 +1,5 @@
 <?php
-
+//create table to save api_key
 /**
  * Implements hook_schema().
  */

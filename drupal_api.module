@@ -1,6 +1,5 @@
 <?php
-use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Database\Database;
+
 /**
  * Implements hook_menu().
  */function drupal_api_menu(){
@@ -26,21 +25,27 @@ use Drupal\Core\Database\Database;
 
   return $items;
 }
+
 function jobs_page_callback() {
 
-  $results = array();
-  $params=drupal_get_query_parameters();
-  $emp_id=$params['employer_id'];//test ID =0/1
-  $encodedkey=$params['api_key'];//test 2
+  $results = [];
+  $params = drupal_get_query_parameters();
+  $emp_id = $params['employer_id'];//test ID =0/1
+  $encodedkey = $params['api_key'];//test 2
+
+  $start_date =$params['start_date'];
+  $starttimestamp = strtotime($start_date);
+
+  $end_date = $params['end_date'];
+  $endtimestamp = strtotime($end_date);
 
   $hasKey = db_select('field_data_field_portal_api_key');
   $hasKey->addField('field_data_field_portal_api_key', 'field_portal_api_key_value');
-  $hasKey->condition('field_portal_api_key_value',$encodedkey);
+  $hasKey->condition('field_portal_api_key_value', $encodedkey);
   $key = $hasKey->execute()->fetchField();
 
-  if(isset($emp_id)) {
-    if ($key == $encodedkey) {
-
+  if ($key == $encodedkey) {
+    if (isset($emp_id)) {
       // no need to query twice here can get all data by single query
       //provides a response with all jobs for that particular node id
       $query = db_select('node', 'n');
@@ -51,7 +56,7 @@ function jobs_page_callback() {
       $query->addField('n', 'status', 'status');
       $query->addField('ne', 'expire', 'expire');
       $query->condition('n.uid', $emp_id);
-
+      $query->condition('created', array($starttimestamp,$endtimestamp), 'BETWEEN');
       $data = $query->execute()->fetchAll();
 
       foreach ($data as $row) {
@@ -70,16 +75,15 @@ function jobs_page_callback() {
       return drupal_json_output($results);
     }
     else {
-      http_response_code(401);
+      http_response_code(412);
     }
   }
-  else{
-    http_response_code(412);
+  else {
+    http_response_code(401);
   }
 
 
 }
-
 
 function employer_page_callback() {
 
@@ -139,21 +143,25 @@ function employer_page_callback() {
 
 }
 
-
 function application_page_callback() {
-  $results = array();
-  $params=drupal_get_query_parameters();
-  $job_id=$params['job_id']; //valid job ID =15939,15884,15870
-  $encodedkey=$params['api_key'];//test 2
+  $results = [];
+  $params = drupal_get_query_parameters();
+  $job_id = $params['job_id']; //valid job ID =15939,15884,15870
+  $encodedkey = $params['api_key'];//test 2
+
+  $start_date =$params['start_date'];
+  $starttimestamp = strtotime($start_date);
+
+  $end_date = $params['end_date'];
+  $endtimestamp = strtotime($end_date);
 
   $hasKey = db_select('field_data_field_portal_api_key');
   $hasKey->addField('field_data_field_portal_api_key', 'field_portal_api_key_value');
-  $hasKey->condition('field_portal_api_key_value',$encodedkey);
+  $hasKey->condition('field_portal_api_key_value', $encodedkey);
   $key = $hasKey->execute()->fetchField();
 
-  if(isset($job_id)) {
-    if ($key == $encodedkey) {
-
+  if ($key == $encodedkey) {
+    if (isset($job_id)) {
       $query = db_select('webform_submitted_data');
       $query->addField('webform_submitted_data', 'sid');
       $query->condition('nid', 15); /*Node ID 15 specifies all the submissions related to jobs*/
@@ -166,47 +174,55 @@ function application_page_callback() {
         foreach ($setofsid as $sid) {
 
           $querySubmissions = db_select('webform_submitted_data', 'wsd');
+          $querySubmissions->join('webform_submissions', 'sd', 'sd.sid=wsd.sid');
           $querySubmissions->leftJoin('webform_component', 'wc', 'wsd.cid = wc.cid');
           $querySubmissions->addField('wsd', 'data');
+          $querySubmissions->addField('wsd', 'sid');
           $querySubmissions->addField('wc', 'name');
-          $querySubmissions->condition('sid', $sid->sid);
+          $querySubmissions->condition('wsd.sid', $sid->sid);
+          $querySubmissions->condition('sd.sid', $sid->sid);
+          $querySubmissions->condition('submitted', array($starttimestamp,$endtimestamp), 'BETWEEN');
           $querySubmissions->groupBy('wsd.data');
           $result = $querySubmissions->execute()->fetchAll();
 
-          $obj['id'] = $sid->sid;
 
           foreach ($result as $row) {
 
             if ($row->name == 'Attach your CV') {
-
               $file = file_load($row->data);
-
               $obj[$row->name] = file_create_url($file->uri);
-
             }
-            else {
-
+            else if($row->name != 'Attach your CV') {
+              $obj['id'] = $row->sid;
               $obj[$row->name] = $row->data;
 
             }
-
           }
-
           array_push($results, $obj);
-
         }
+
+
+
+      }
+      if($obj == NULL)
+      {
+        $empty=[
+          "applications:"=>[]
+        ];
+        return drupal_json_output($empty);
+      }else
+      {
+        return drupal_json_output($results);
       }
 
-      return drupal_json_output($results);
     }
     else {
-      http_response_code(401);
+      http_response_code(412);
     }
   }
-  else{
-    http_response_code(412);
+  else {
+    http_response_code(401);
   }
 
 }
-
 ?>

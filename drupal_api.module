@@ -167,7 +167,21 @@ function application_page_callback() {
       $query->condition('nid', 15); /*Node ID 15 specifies all the submissions related to jobs*/
       $query->condition('data', $job_id);
       $query->condition('cid', 10);
-      $setofsid = $query->execute()->fetchAll();
+      $setofsid = $query->execute()->fetchAll();//submission ID
+
+      $query = db_select('field_data_field_industry');
+      $query->addField('field_data_field_industry', 'field_industry_tid');
+      $query->condition('entity_id', $job_id);
+      $tid = $query->execute()->fetchAll();//get taxanomy ID
+
+      foreach ($tid as $tidValue) {
+
+        $query2 = db_select('taxonomy_term_data');
+        $query2->addField('taxonomy_term_data', 'name');
+        $query2->condition('tid', $tidValue->field_industry_tid);//get the industry name based on taxanomy ID
+        $result2 = $query2->execute()->fetchAll();
+      }
+
 
       if ($setofsid) {
 
@@ -193,8 +207,12 @@ function application_page_callback() {
               $obj[$row->name] = file_create_url($file->uri);
             }
             else if($row->name != 'Attach your CV') {
+
               $obj['id'] = $row->sid;
               $obj[$row->name] = $row->data;
+              foreach ($result2 as $jobCategory){
+                $obj['job_category']=$jobCategory->name;
+              }
 
             }
           }
@@ -225,4 +243,5 @@ function application_page_callback() {
   }
 
 }
+
 ?>

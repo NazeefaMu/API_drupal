@@ -98,10 +98,15 @@ function employer_page_callback() {
 
   if($key==$encodedkey) {
 
+    $rid = db_select('field_data_field_rid');
+    $rid->addField('field_data_field_rid', 'field_rid_value');
+    $rid->orderBy('field_rid_value','DESC');
+    $ridVal = $rid->execute()->fetchField();
+
     //get ID's relevant to employer- get user ID where role ID is 4
     $isEmployer = db_select('users_roles');
     $isEmployer->addField('users_roles', 'uid');
-    $isEmployer->condition('rid', 4);
+    $isEmployer->condition('rid', $ridVal);
     $employerID = $isEmployer->execute()->fetchCol();
 
     //get employer Data
@@ -160,13 +165,23 @@ function application_page_callback() {
   $hasKey->condition('field_portal_api_key_value', $encodedkey);
   $key = $hasKey->execute()->fetchField();
 
+  $nid = db_select('field_data_field_portal_node_id');
+  $nid->addField('field_data_field_portal_node_id', 'field_portal_node_id_value');
+  $nid->orderBy('field_portal_node_id_value','DESC');
+  $nidVal = $nid->execute()->fetchField();//node ID with forms related to Job
+
+  $cid = db_select('field_data_field_portal_cid');
+  $cid->addField('field_data_field_portal_cid', 'field_portal_cid_value');
+  $cid->orderBy('field_portal_cid_value','DESC');
+  $cidVal = $cid->execute()->fetchField();
+
   if ($key == $encodedkey) {
     if (isset($job_id)) {
       $query = db_select('webform_submitted_data');
       $query->addField('webform_submitted_data', 'sid');
-      $query->condition('nid', 15); /*Node ID 15 specifies all the submissions related to jobs*/
+      $query->condition('nid', $nidVal); /*Node ID 15 specifies all the submissions related to jobs*/
       $query->condition('data', $job_id);
-      $query->condition('cid', 10);
+      $query->condition('cid', $cidVal);
       $setofsid = $query->execute()->fetchAll();//submission ID
 
       $query = db_select('field_data_field_industry');

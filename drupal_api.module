@@ -78,6 +78,15 @@ class common {
     'type' => MENU_CALLBACK,
   );
 
+  $items['admin/config/content/drupal_api_settings'] = array(
+    'title' => 'Drupal API settings',
+    'description' => 'Configuration for Drupal API module',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('drupal_api_form'),
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
   return $items;
 }
 
@@ -284,5 +293,64 @@ function application_page_callback() {
   }
 
 }
+
+
+/**
+ * Page callback: Current posts settings
+ *
+ * @see current_posts_menu()
+ */
+function drupal_api_form($form, &$form_state) {
+  $form['form_api_key'] = array(
+    '#type' => 'textfield',
+    '#title' => t('API key'),
+    '#description' => t('API key for webform'),
+    '#required' => TRUE,
+  );
+  $form['form_node_id'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Node ID'),
+    '#default_value' => 15,
+    '#description' => t('Node ID for webform'),
+    '#required' => TRUE,
+  );
+
+  $form['form_rid'] = array(
+    '#type' => 'textfield',
+    '#title' => t('RID'),
+    '#default_value' => 4,
+    '#description' => t('RID for webform'),
+    '#required' => TRUE,
+  );
+  $form['form_cid'] = array(
+    '#type' => 'textfield',
+    '#title' => t('CID'),
+    '#default_value' => 10,
+    '#description' => t('CID for webform'),
+    '#required' => TRUE,
+  );
+
+
+  return system_settings_form($form);
+}
+
+function submitForm(&$form, &$form_state) {
+
+  $query = db_insert('api_key');
+  $query->fields(array(
+    'api_key' => $form['values']['form_api_key'],
+    'nid' => $form['values']['form_node_id'],
+    'rid' => $form['values']['form_rid'],
+    'cid' => $form['values']['form_cid']
+  ));
+  $query->execute();
+
+
+}
+
+
+
+
+
 
 ?>

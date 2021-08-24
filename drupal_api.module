@@ -1,5 +1,60 @@
 <?php
 
+class common {
+  // Properties
+  public $ridVal;
+  public $nidVal;
+  public $cidVal;
+
+  // Methods
+  function get_nid() {
+    $nid = db_select('field_data_field_portal_node_id');
+    $nid->addField('field_data_field_portal_node_id', 'field_portal_node_id_value');
+    $nid->orderBy('field_portal_node_id_value','DESC');
+    $nidValOutput = $nid->execute()->fetchField();//node ID with forms related to Job
+    $this->nidVal = $nidValOutput;
+
+    return $this->nidVal;
+  }
+
+  function get_cid() {
+    $cid = db_select('field_data_field_portal_cid');
+    $cid->addField('field_data_field_portal_cid', 'field_portal_cid_value');
+    $cid->orderBy('field_portal_cid_value','DESC');
+    $cidValOutput = $cid->execute()->fetchField();
+    $this->cidVal = $cidValOutput;
+
+    return $this->cidVal;
+  }
+
+  function get_rid() {
+    $rid = db_select('field_data_field_rid');
+    $rid->addField('field_data_field_rid', 'field_rid_value');
+    $rid->orderBy('field_rid_value','DESC');
+    $ridValOutput = $rid->execute()->fetchField();
+    $this->ridVal = $ridValOutput;
+
+    return $this->ridVal;
+  }
+
+  function authenticate() {
+    $params = drupal_get_query_parameters();
+    $encodedkey = $params['api_key'];
+
+    $hasKey = db_select('field_data_field_portal_api_key');
+    $hasKey->addField('field_data_field_portal_api_key', 'field_portal_api_key_value');
+    $hasKey->condition('field_portal_api_key_value', $encodedkey);
+    $key = $hasKey->execute()->fetchField();
+
+    if ($key == $encodedkey) {
+
+      return true;
+    }
+    else {
+      return false;
+    }
+  }
+}
 /**
  * Implements hook_menu().
  */function drupal_api_menu(){
@@ -31,7 +86,6 @@ function jobs_page_callback() {
   $results = [];
   $params = drupal_get_query_parameters();
   $emp_id = $params['employer_id'];//test ID =0/1
-  $encodedkey = $params['api_key'];//test 2
 
   $start_date =$params['start_date'];
   $starttimestamp = strtotime($start_date);
@@ -39,12 +93,8 @@ function jobs_page_callback() {
   $end_date = $params['end_date'];
   $endtimestamp = strtotime($end_date);
 
-  $hasKey = db_select('field_data_field_portal_api_key');
-  $hasKey->addField('field_data_field_portal_api_key', 'field_portal_api_key_value');
-  $hasKey->condition('field_portal_api_key_value', $encodedkey);
-  $key = $hasKey->execute()->fetchField();
-
-  if ($key == $encodedkey) {
+  $common=new common();
+  if($common->authenticate() == TRUE){
     if (isset($emp_id)) {
       // no need to query twice here can get all data by single query
       //provides a response with all jobs for that particular node id
@@ -87,26 +137,15 @@ function jobs_page_callback() {
 
 function employer_page_callback() {
 
-  $results = array();
-  $params=drupal_get_query_parameters();
-  $encodedkey=$params['api_key'];//test 2
+  $common=new common();
 
-  $hasKey = db_select('field_data_field_portal_api_key');
-  $hasKey->addField('field_data_field_portal_api_key', 'field_portal_api_key_value');
-  $hasKey->condition('field_portal_api_key_value',$encodedkey);
-  $key = $hasKey->execute()->fetchField();
+  if($common->authenticate() == TRUE){
 
-  if($key==$encodedkey) {
-
-    $rid = db_select('field_data_field_rid');
-    $rid->addField('field_data_field_rid', 'field_rid_value');
-    $rid->orderBy('field_rid_value','DESC');
-    $ridVal = $rid->execute()->fetchField();
 
     //get ID's relevant to employer- get user ID where role ID is 4
     $isEmployer = db_select('users_roles');
     $isEmployer->addField('users_roles', 'uid');
-    $isEmployer->condition('rid', $ridVal);
+    $isEmployer->condition('rid', $common->get_rid());
     $employerID = $isEmployer->execute()->fetchCol();
 
     //get employer Data
@@ -152,7 +191,6 @@ function application_page_callback() {
   $results = [];
   $params = drupal_get_query_parameters();
   $job_id = $params['job_id']; //valid job ID =15939,15884,15870
-  $encodedkey = $params['api_key'];//test 2
 
   $start_date =$params['start_date'];
   $starttimestamp = strtotime($start_date);
@@ -160,28 +198,16 @@ function application_page_callback() {
   $end_date = $params['end_date'];
   $endtimestamp = strtotime($end_date);
 
-  $hasKey = db_select('field_data_field_portal_api_key');
-  $hasKey->addField('field_data_field_portal_api_key', 'field_portal_api_key_value');
-  $hasKey->condition('field_portal_api_key_value', $encodedkey);
-  $key = $hasKey->execute()->fetchField();
 
-  $nid = db_select('field_data_field_portal_node_id');
-  $nid->addField('field_data_field_portal_node_id', 'field_portal_node_id_value');
-  $nid->orderBy('field_portal_node_id_value','DESC');
-  $nidVal = $nid->execute()->fetchField();//node ID with forms related to Job
+  $common = new common();
 
-  $cid = db_select('field_data_field_portal_cid');
-  $cid->addField('field_data_field_portal_cid', 'field_portal_cid_value');
-  $cid->orderBy('field_portal_cid_value','DESC');
-  $cidVal = $cid->execute()->fetchField();
-
-  if ($key == $encodedkey) {
+  if($common->authenticate() == TRUE){
     if (isset($job_id)) {
       $query = db_select('webform_submitted_data');
       $query->addField('webform_submitted_data', 'sid');
-      $query->condition('nid', $nidVal); /*Node ID 15 specifies all the submissions related to jobs*/
+      $query->condition('nid', $common->get_nid()); /*Node ID 15 specifies all the submissions related to jobs*/
       $query->condition('data', $job_id);
-      $query->condition('cid', $cidVal);
+      $query->condition('cid', $common->get_cid());
       $setofsid = $query->execute()->fetchAll();//submission ID
 
       $query = db_select('field_data_field_industry');

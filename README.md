@@ -18,9 +18,9 @@ Display data fetched from drupal site
 - Choose context if you need (if for example you want to have different settings for different languages) and save config page.
 - Go to "https://drupal8.local/admin/structure/config_pages/types" and find your config page there,
   add following fields.
-  1.API KEY (machine name: field_portal_api_key)
-  2.Node ID (machine name: field_portal_node_id)
-  3.CID (machine name: field_portal_cid)
+  1. API KEY (machine name: field_portal_api_key)
+  2. Node ID (machine name: field_portal_node_id)
+  3. CID (machine name: field_portal_cid)
 - The configuration page will appear on the list of configurations to view,insert needed
  values.
 

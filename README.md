@@ -21,6 +21,8 @@ Display data fetched from drupal site
   1. API KEY (machine name: field_portal_api_key)
   2. Node ID (machine name: field_portal_node_id)
   3. CID (machine name: field_portal_cid)
+  4. RID (machine name: field_rid)
+
 - The configuration page will appear on the list of configurations to view,insert needed
  values.
 

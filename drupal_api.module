@@ -78,7 +78,7 @@ class common {
     'type' => MENU_CALLBACK,
   );
 
-  $items['admin/config/content/drupal_api_settings'] = array(
+  $items['admin/config/development/drupal_api_settings'] = array(
     'title' => 'Drupal API settings',
     'description' => 'Configuration for Drupal API module',
     'page callback' => 'drupal_get_form',
@@ -335,7 +335,7 @@ function drupal_api_form($form, &$form_state) {
   return system_settings_form($form);
 }
 
-function submitForm(&$form, &$form_state) {
+function drupal_api_form_submit($form, &$form_state) {
 
   $query = db_insert('api_key');
   $query->fields(array(

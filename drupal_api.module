@@ -296,11 +296,12 @@ function application_page_callback() {
 
 
 /**
- * Page callback: Current posts settings
+ * Page callback: drupal api settings
  *
- * @see current_posts_menu()
+ * @see drupal_api_menu()
  */
 function drupal_api_form($form, &$form_state) {
+
   $form['form_api_key'] = array(
     '#type' => 'textfield',
     '#title' => t('API key'),
@@ -344,13 +345,5 @@ function submitForm(&$form, &$form_state) {
     'cid' => $form['values']['form_cid']
   ));
   $query->execute();
-
-
 }
-
-
-
-
-
-
 ?>

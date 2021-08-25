@@ -8,30 +8,30 @@ class common {
 
   // Methods
   function get_nid() {
-    $nid = db_select('field_data_field_portal_node_id');
-    $nid->addField('field_data_field_portal_node_id', 'field_portal_node_id_value');
-    $nid->orderBy('field_portal_node_id_value','DESC');
-    $nidValOutput = $nid->execute()->fetchField();//node ID with forms related to Job
+    $query = db_select('api_key');
+    $query->addField('api_key', 'nid');
+    $query->orderBy('nid','DESC');
+    $nidValOutput = $query->execute()->fetchField();//node ID with forms related to Job
     $this->nidVal = $nidValOutput;
 
     return $this->nidVal;
   }
 
   function get_cid() {
-    $cid = db_select('field_data_field_portal_cid');
-    $cid->addField('field_data_field_portal_cid', 'field_portal_cid_value');
-    $cid->orderBy('field_portal_cid_value','DESC');
-    $cidValOutput = $cid->execute()->fetchField();
+    $query = db_select('api_key');
+    $query->addField('api_key', 'cid');
+    $query->orderBy('cid','DESC');
+    $cidValOutput = $query->execute()->fetchField();
     $this->cidVal = $cidValOutput;
 
     return $this->cidVal;
   }
 
   function get_rid() {
-    $rid = db_select('field_data_field_rid');
-    $rid->addField('field_data_field_rid', 'field_rid_value');
-    $rid->orderBy('field_rid_value','DESC');
-    $ridValOutput = $rid->execute()->fetchField();
+    $query = db_select('api_key');
+    $query->addField('api_key', 'rid');
+    $query->orderBy('rid','DESC');
+    $ridValOutput = $query->execute()->fetchField();
     $this->ridVal = $ridValOutput;
 
     return $this->ridVal;
@@ -41,9 +41,10 @@ class common {
     $params = drupal_get_query_parameters();
     $encodedkey = $params['api_key'];
 
-    $hasKey = db_select('field_data_field_portal_api_key');
-    $hasKey->addField('field_data_field_portal_api_key', 'field_portal_api_key_value');
-    $hasKey->condition('field_portal_api_key_value', $encodedkey);
+    $hasKey = db_select('api_key');
+    $hasKey->addField('api_key', 'api_key');
+    $hasKey->orderBy('api_key','DESC');
+    $hasKey->condition('api_key', $encodedkey);
     $key = $hasKey->execute()->fetchField();
 
     if ($key == $encodedkey) {
@@ -331,19 +332,31 @@ function drupal_api_form($form, &$form_state) {
     '#required' => TRUE,
   );
 
+  $form['submit_button'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+  );
 
-  return system_settings_form($form);
+
+  return $form;
+}
+
+function drupal_api_form_validate($form, &$form_state) {
+  if ($form_state['values']['form_api_key'] == ""){
+    form_set_error('api_key', t('API key Cannot Be empty.'));
+  }
+
 }
 
 function drupal_api_form_submit($form, &$form_state) {
 
-  $query = db_insert('api_key');
-  $query->fields(array(
-    'api_key' => $form['values']['form_api_key'],
-    'nid' => $form['values']['form_node_id'],
-    'rid' => $form['values']['form_rid'],
-    'cid' => $form['values']['form_cid']
-  ));
-  $query->execute();
+  $query = db_insert('api_key')
+    ->fields(array(
+      'api_key' => $form_state['values']['form_api_key'],
+      'nid' => $form_state['values']['form_node_id'],
+      'rid' => $form_state['values']['form_rid'],
+      'cid' => $form_state['values']['form_cid'],
+    ))
+    ->execute();
 }
 ?>

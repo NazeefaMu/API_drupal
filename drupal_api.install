@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Implements hook_schema().
  */
@@ -36,8 +37,22 @@ function drupal_api_schema() {
     'primary key' => array('id'),
   );
 
-
   return $schema;
 }
+
+//
+///**
+// * Implements hook_uninstall().
+// */
+//function drupal_api_uninstall($module) {
+//    $schema = drupal_get_schema_unprocessed($module);
+//    _drupal_schema_initialize($schema, $module, FALSE);
+//    foreach ($schema as $table) {
+//      if (db_table_exists($table['api_configuration'])) {
+//        db_drop_table($table['api_configuration']);
+//      }
+//    }
+//
+//}
 
 

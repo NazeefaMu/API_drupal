@@ -10,8 +10,6 @@ class common {
   function get_nid() {
     $query = db_select('api_configuration');
     $query->addField('api_configuration', 'nid');
-    $query->orderBy('nid','DESC');
-    $query->range(0, 1);
     $nidValOutput = $query->execute()->fetchField();//node ID with forms related to Job
     $this->nidVal = $nidValOutput;
 
@@ -21,8 +19,6 @@ class common {
   function get_cid() {
     $query = db_select('api_configuration');
     $query->addField('api_configuration', 'cid');
-    $query->orderBy('cid','DESC');
-    $query->range(0, 1);
     $cidValOutput = $query->execute()->fetchField();
     $this->cidVal = $cidValOutput;
 
@@ -32,8 +28,6 @@ class common {
   function get_rid() {
     $query = db_select('api_configuration');
     $query->addField('api_configuration', 'rid');
-    $query->orderBy('rid','DESC');
-    $query->range(0, 1);
     $ridValOutput = $query->execute()->fetchField();
     $this->ridVal = $ridValOutput;
 
@@ -46,13 +40,10 @@ class common {
 
     $hasKey = db_select('api_configuration');
     $hasKey->addField('api_configuration', 'api_key');
-    $hasKey->orderBy('api_key','DESC');
-    $hasKey->range(0, 1);
-    $hasKey->condition('api_key', $encodedkey);
     $key = $hasKey->execute()->fetchField();
 
-    if ($key == $encodedkey) {
 
+    if ($key === $encodedkey) {
       return true;
     }
     else {
@@ -354,13 +345,36 @@ function drupal_api_form_validate($form, &$form_state) {
 
 function drupal_api_form_submit($form, &$form_state) {
 
-  $query = db_insert('api_configuration')
-    ->fields(array(
-      'api_key' => $form_state['values']['form_api_key'],
-      'nid' => $form_state['values']['form_node_id'],
-      'rid' => $form_state['values']['form_rid'],
-      'cid' => $form_state['values']['form_cid'],
-    ))
-    ->execute();
+  $query = db_select('api_configuration');
+  $query->addField('api_configuration', 'id');
+  $output = $query->execute()->fetchField();
+
+  if(empty($output)) {
+
+    $query = db_insert('api_configuration')
+      ->fields([
+        'api_key' => $form_state['values']['form_api_key'],
+        'nid' => $form_state['values']['form_node_id'],
+        'rid' => $form_state['values']['form_rid'],
+        'cid' => $form_state['values']['form_cid'],
+      ])
+      ->execute();
+    drupal_set_message("Successfully inserted");
+  }
+  else{
+
+    $query = db_update('api_configuration')
+      ->fields([
+        'api_key' => $form_state['values']['form_api_key'],
+        'nid' => $form_state['values']['form_node_id'],
+        'rid' => $form_state['values']['form_rid'],
+        'cid' => $form_state['values']['form_cid'],
+      ])
+      ->execute();
+    drupal_set_message("Successfully updated");
+
+  }
+
+
 }
 ?>

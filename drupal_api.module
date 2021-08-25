@@ -298,16 +298,33 @@ function application_page_callback() {
  */
 function drupal_api_form($form, &$form_state) {
 
+  $query = db_select('api_configuration');
+  $query->addField('api_configuration', 'api_key');
+  $query->addField('api_configuration', 'nid');
+  $query->addField('api_configuration', 'rid');
+  $query->addField('api_configuration', 'cid');
+  $output = $query->execute()->fetchAll();
+
+
+  foreach ($output as $result){
+    $api_key=$result->api_key;
+    $nid=$result->nid;
+    $rid=$result->rid;
+    $cid=$result->cid;
+
+  }
+
   $form['form_api_key'] = array(
     '#type' => 'textfield',
     '#title' => t('API key'),
+    '#default_value' => $api_key,
     '#description' => t('API key for webform'),
     '#required' => TRUE,
   );
   $form['form_node_id'] = array(
     '#type' => 'textfield',
     '#title' => t('Node ID'),
-    '#default_value' => 15,
+    '#default_value' => $nid,
     '#description' => t('Node ID for webform'),
     '#required' => TRUE,
   );
@@ -315,14 +332,14 @@ function drupal_api_form($form, &$form_state) {
   $form['form_rid'] = array(
     '#type' => 'textfield',
     '#title' => t('RID'),
-    '#default_value' => 4,
+    '#default_value' => $rid,
     '#description' => t('RID for webform'),
     '#required' => TRUE,
   );
   $form['form_cid'] = array(
     '#type' => 'textfield',
     '#title' => t('CID'),
-    '#default_value' => 10,
+    '#default_value' => $cid,
     '#description' => t('CID for webform'),
     '#required' => TRUE,
   );

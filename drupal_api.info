@@ -1,5 +1,5 @@
 name = Drupal API for career first
 description=Contains endpoints <a href="https://docs.google.com/document/d/1KTwsZnVpz5cw3f2Et8FiKLoRcIOxzahkJ410s-OvAdE/edit">Document</a>
 core = 7.x
-configure = admin/config/content/drupal_api_settings
+configure = admin/config/development/drupal_api_settings
 

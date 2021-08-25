@@ -1,0 +1,43 @@
+<?php
+/**
+ * Implements hook_schema().
+ */
+function drupal_api_schema() {
+  $schema['api_configuration'] = array(
+    'description' => 'Configuration for API module',
+    'fields' => array(
+      'id' => array(
+        'description' => 'Identifier',
+        'type' => 'serial',
+        'not null' => TRUE,
+      ),
+      'api_key' => array(
+        'description' => 'Key identifier',
+        'type' => 'varchar',
+        'length' => '50',
+        'not null' => TRUE,
+      ),
+      'nid' => array(
+        'description' => 'Node ID of job offer related webforms',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'cid' => array(
+        'description' => 'Content ID of application data',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'rid' => array(
+        'description' => 'Role ID of employers',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+
+
+  return $schema;
+}
+
+

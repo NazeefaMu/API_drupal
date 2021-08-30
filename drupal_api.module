@@ -93,10 +93,10 @@ function jobs_page_callback() {
   $emp_id = $params['employer_id'];//test ID =0/1
 
   $start_date =$params['start_date'];
-  $starttimestamp = strtotime($start_date);
+  $starttimestamp = strtotime($start_date.'00:00:00');
 
   $end_date = $params['end_date'];
-  $endtimestamp = strtotime($end_date);
+  $endtimestamp = strtotime($end_date.'23:59:59');
 
   $common=new common();
   if($common->authenticate() == TRUE){
@@ -111,7 +111,8 @@ function jobs_page_callback() {
       $query->addField('n', 'status', 'status');
       $query->addField('ne', 'expire', 'expire');
       $query->condition('n.uid', $emp_id);
-      $query->condition('created', array($starttimestamp,$endtimestamp), 'BETWEEN');
+      $query->condition('created', array($starttimestamp), '>=');
+      $query->condition('created', array($endtimestamp), '<=');
       $data = $query->execute()->fetchAll();
 
       foreach ($data as $row) {
@@ -198,10 +199,11 @@ function application_page_callback() {
   $job_id = $params['job_id']; //valid job ID =15939,15884,15870
 
   $start_date =$params['start_date'];
-  $starttimestamp = strtotime($start_date);
+  $starttimestamp = strtotime($start_date.'00:00:00');
 
   $end_date = $params['end_date'];
-  $endtimestamp = strtotime($end_date);
+  $endtimestamp = strtotime($end_date.'23:59:59');
+
 
 
   $common = new common();
@@ -241,10 +243,10 @@ function application_page_callback() {
           $querySubmissions->addField('wc', 'name');
           $querySubmissions->condition('wsd.sid', $sid->sid);
           $querySubmissions->condition('sd.sid', $sid->sid);
-          $querySubmissions->condition('submitted', array($starttimestamp,$endtimestamp), 'BETWEEN');
+          $querySubmissions->condition('submitted', array($starttimestamp), '>=');
+          $querySubmissions->condition('submitted', array($endtimestamp), '<=');
           $querySubmissions->groupBy('wsd.data');
           $result = $querySubmissions->execute()->fetchAll();
-
 
           foreach ($result as $row) {
 

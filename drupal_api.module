@@ -306,9 +306,6 @@ function summary_page_callback() {
     $startdate=strtotime(date("Y-m-d").'00:00:00');
     $common = new common();
 
-//    $startdate=strtotime('2019-12-23 00:00:00');
-//    $endDate=strtotime('2019-12-23 23:59:59');
-
     $query = db_select('publication_date','p');
     $query->join('node','n','n.nid=p.nid');
     $query->addField('p.publication_date', 'nid');

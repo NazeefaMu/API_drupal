@@ -355,6 +355,7 @@ function summary_page_callback() {
     $query->innerJoin('node','n','n.nid=p.nid');
     $query->innerJoin('field_data_field_authorized_user','f','p.nid=f.entity_id');
     $query->join('users','u','u.uid=f.field_authorized_user_uid');
+    $query->addField('n', 'title','title');
     $query->addField('u', 'name','name');
     $query->addField('p', 'nid','nid');
     $query->condition('p.published_at', $startdate,'>=');//2019-12-23
@@ -366,7 +367,9 @@ function summary_page_callback() {
     $urlArray=[];
     $obj = [
       "jobs_count_user"=>[],
-      "Job_list"=>[]
+      "Job_list"=>[
+        "URL"=>[]
+      ]
     ];
     $obj['jobs_count'] = $privateJobsCount+$totalGovCount;
     $obj['gov_jobs_count'] = $totalGovCount;
@@ -375,9 +378,10 @@ function summary_page_callback() {
 
 
     foreach ($allUrl as $url){
-      $urlArray['URL'] = url("node/$url->nid");
-      array_push($obj['Job_list'], current(current(array($urlArray))));
+      $urlArray[$url->title] = url("node/$url->nid");
     }
+    array_push($obj['Job_list']['URL'], current(array($urlArray)));
+
     foreach ($totalCountbyUser as $users) {
         $byUser[$users->name] = $users->user_count;
     }

@@ -1,21 +1,29 @@
 <?php
 
+/*
+ *
+ * This function is responsible common,resused functions
+ */
 class common {
-  // Properties
   public $ridVal;
   public $nidVal;
   public $cidVal;
 
-  // Methods
+  /*
+   * Get Node ID containing webforms related to job
+  */
   function get_nid() {
     $query = db_select('api_configuration');
     $query->addField('api_configuration', 'nid');
-    $nidValOutput = $query->execute()->fetchField();//node ID with forms related to Job
+    $nidValOutput = $query->execute()->fetchField();
     $this->nidVal = $nidValOutput;
 
     return $this->nidVal;
   }
 
+ /*
+ * Get content ID to identify application data
+ */
   function get_cid() {
     $query = db_select('api_configuration');
     $query->addField('api_configuration', 'cid');
@@ -25,6 +33,9 @@ class common {
     return $this->cidVal;
   }
 
+  /*
+  * Get Role ID relevant employers
+  */
   function get_rid() {
     $query = db_select('api_configuration');
     $query->addField('api_configuration', 'rid');
@@ -34,6 +45,9 @@ class common {
     return $this->ridVal;
   }
 
+  /*
+   * Check if API key matches the key sent with request
+   * */
   function authenticate() {
     $params = drupal_get_query_parameters();
     $encodedkey = $params['api_key'];
@@ -53,6 +67,8 @@ class common {
 }
 /**
  * Implements hook_menu().
+ * Menu including the endpoint URL and page callback
+ *
  */function drupal_api_menu(){
   $items=array();
   $items['api/get-jobs'] = array(
@@ -91,11 +107,15 @@ class common {
   return $items;
 }
 
+/*
+ * This function is to get job details posted by employers and filtered by
+ * date range by providing "employer ID"
+ */
 function jobs_page_callback() {
 
   $results = [];
   $params = drupal_get_query_parameters();
-  $emp_id = $params['employer_id'];//test ID =0/1
+  $emp_id = $params['employer_id'];
 
   $start_date =$params['start_date'];
   $starttimestamp = strtotime($start_date.'00:00:00');
@@ -144,6 +164,9 @@ function jobs_page_callback() {
 
 }
 
+/*
+ * This function is to get all the employer and details
+ */
 function employer_page_callback() {
 
   $common=new common();
@@ -151,13 +174,17 @@ function employer_page_callback() {
   if($common->authenticate() == TRUE){
 
 
-    //get ID's relevant to employer- get user ID where role ID is 4
+/*
+ * get employer ID's relevant to employer
+*/
     $isEmployer = db_select('users_roles');
     $isEmployer->addField('users_roles', 'uid');
     $isEmployer->condition('rid', $common->get_rid());
     $employerID = $isEmployer->execute()->fetchCol();
 
-    //get employer Data
+/*
+ * employer Data
+*/
     $query = db_select('users');
     $query->addField('users', 'uid','uid');
     $query->addField('users', 'name','name');
@@ -196,10 +223,14 @@ function employer_page_callback() {
 
 }
 
+/*
+ * This function is to get applications and details submitted for job offers
+ * filtered by date range by providing "job ID"
+*/
 function application_page_callback() {
   $results = [];
   $params = drupal_get_query_parameters();
-  $job_id = $params['job_id']; //valid job ID =15939,15884,15870
+  $job_id = $params['job_id'];
 
   $start_date =$params['start_date'];
   $starttimestamp = strtotime($start_date.'00:00:00');
@@ -207,19 +238,24 @@ function application_page_callback() {
   $end_date = $params['end_date'];
   $endtimestamp = strtotime($end_date.'23:59:59');
 
-
-
   $common = new common();
 
   if($common->authenticate() == TRUE){
     if (isset($job_id)) {
+
+      /*
+       * Get application submissions
+       */
       $query = db_select('webform_submitted_data');
       $query->addField('webform_submitted_data', 'sid');
-      $query->condition('nid', $common->get_nid()); /*Node ID 15 specifies all the submissions related to jobs*/
+      $query->condition('nid', $common->get_nid());
       $query->condition('data', $job_id);
       $query->condition('cid', $common->get_cid());
-      $setofsid = $query->execute()->fetchAll();//submission ID
+      $setofsid = $query->execute()->fetchAll();
 
+      /*
+       * Get taxonomy ID to identify the job industry
+       */
       $query = db_select('field_data_field_industry');
       $query->addField('field_data_field_industry', 'field_industry_tid');
       $query->condition('entity_id', $job_id);
@@ -227,9 +263,12 @@ function application_page_callback() {
 
       foreach ($tid as $tidValue) {
 
+        /*
+         * Get industry name based on taxanomy ID
+         */
         $query2 = db_select('taxonomy_term_data');
         $query2->addField('taxonomy_term_data', 'name');
-        $query2->condition('tid', $tidValue->field_industry_tid);//get the industry name based on taxanomy ID
+        $query2->condition('tid', $tidValue->field_industry_tid);
         $result2 = $query2->execute()->fetchAll();
       }
 
@@ -237,7 +276,9 @@ function application_page_callback() {
       if ($setofsid) {
 
         foreach ($setofsid as $sid) {
-
+          /*
+           * Get all data relevant to application based on submission ID
+           */
           $querySubmissions = db_select('webform_submitted_data', 'wsd');
           $querySubmissions->join('webform_submissions', 'sd', 'sd.sid=wsd.sid');
           $querySubmissions->leftJoin('webform_component', 'wc', 'wsd.cid = wc.cid');
@@ -295,6 +336,10 @@ function application_page_callback() {
 
 }
 
+/*
+ * This function is to get summary of jobs,applications and specific URL
+ * filtered by date range
+*/
 function summary_page_callback() {
   $results = [
     "summary"=>[]
@@ -376,7 +421,6 @@ function summary_page_callback() {
     $obj['pvt_jobs_count'] = $privateJobsCount;
     $obj['total_applications'] = $totalapplications;
 
-
     foreach ($allUrl as $url){
       $urlArray[$url->title] = url("node/$url->nid");
     }
@@ -401,7 +445,7 @@ function summary_page_callback() {
 
 /**
  * Page callback: drupal api settings
- *
+ * Created for configuration form
  * @see drupal_api_menu()
  */
 function drupal_api_form($form, &$form_state) {
@@ -461,6 +505,10 @@ function drupal_api_form($form, &$form_state) {
   return $form;
 }
 
+/**
+ * Validate configuration form
+ * @see drupal_api_menu()
+ */
 function drupal_api_form_validate($form, &$form_state) {
   if ($form_state['values']['form_api_key'] == ""){
     form_set_error('api_key', t('API key Cannot Be empty.'));
@@ -468,6 +516,10 @@ function drupal_api_form_validate($form, &$form_state) {
 
 }
 
+/**
+ * Save configuration form data to custom table "api_configuration"
+ * @see drupal_api_menu()
+ */
 function drupal_api_form_submit($form, &$form_state) {
 
   $query = db_select('api_configuration');

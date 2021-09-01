@@ -300,23 +300,34 @@ function summary_page_callback() {
     "summary"=>[]
   ];
 
+  $params = drupal_get_query_parameters();
+  $start_date =$params['start_date'];
+  $startdate = strtotime($start_date.'00:00:00');
+
+  $end_date = $params['end_date'];
+  $enddate = strtotime($end_date.'23:59:59');
+
   $common = new common();
 
   if($common->authenticate() == TRUE){
-    $startdate=strtotime(date("Y-m-d").'00:00:00');
+
     $common = new common();
 
     $query = db_select('publication_date','p');
     $query->join('node','n','n.nid=p.nid');
-    $query->addField('p.publication_date', 'nid');
+    $query->innerJoin('field_data_field_authorized_user','f','n.nid=f.entity_id');
+    $query->addField('p', 'nid','nid');
     $query->condition('p.published_at', $startdate,'>=');//oct 18 2015
+    $query->condition('p.published_at', $enddate,'<=');//oct 18 2015
     $query->condition('n.type', 'job_offer');
     $privateJobsCount=$query->countQuery()->execute()->fetchField();
 
-    $query = db_select('publication_date','p');
-    $query->join('node','n','n.nid=p.nid');
-    $query->addField('p.publication_date', 'nid');
-    $query->condition('p.published_at', $startdate,'>=');//2019-12-23
+    $query = db_select('node','n');
+    $query->join('publication_date','p','n.nid=p.nid');
+    $query->innerJoin('field_data_field_authorized_user','f','n.nid=f.entity_id');
+    $query->addField('p', 'nid','nid');
+    $query->condition('p.published_at', $startdate,'>=');
+    $query->condition('p.published_at', $enddate,'<=');//oct 18 2015
     $query->condition('n.type', 'government_jobs');
     $totalGovCount=$query->countQuery()->execute()->fetchField();
 
@@ -324,6 +335,7 @@ function summary_page_callback() {
     $query->addField('ws', 'nid');
     $query->condition('nid', $common->get_nid()); /*Node ID 15 specifies all the submissions related to jobs*/
     $query->condition('submitted', $startdate,'>=');
+    $query->condition('submitted', $enddate,'<=');
     $totalapplications=$query->countQuery()->execute()->fetchField();//form submissions today
 
     $query = db_select('publication_date','p');
@@ -334,6 +346,7 @@ function summary_page_callback() {
     $query->addExpression('count(f.entity_id)','user_count');
     $query->addField('p', 'nid','nid');
     $query->condition('p.published_at', $startdate,'>=');//2019-12-23
+    $query->condition('p.published_at', $enddate,'<=');//oct 18 2015
     $query->condition('n.type', array('job_offer','government_jobs'),'IN');
     $query->groupBy('u.name');
     $totalCountbyUser = $query->execute()->fetchAll();
@@ -345,6 +358,7 @@ function summary_page_callback() {
     $query->addField('u', 'name','name');
     $query->addField('p', 'nid','nid');
     $query->condition('p.published_at', $startdate,'>=');//2019-12-23
+    $query->condition('p.published_at', $enddate,'<=');//oct 18 2015
     $query->condition('n.type', array('job_offer','government_jobs'),'IN');
     $allUrl = $query->execute()->fetchAll();
 
@@ -358,6 +372,7 @@ function summary_page_callback() {
     $obj['gov_jobs_count'] = $totalGovCount;
     $obj['pvt_jobs_count'] = $privateJobsCount;
     $obj['total_applications'] = $totalapplications;
+
 
     foreach ($allUrl as $url){
       $urlArray['URL'] = url("node/$url->nid");

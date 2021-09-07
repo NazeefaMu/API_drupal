@@ -109,6 +109,12 @@ class common {
     'type' => MENU_CALLBACK,
   );
 
+  $items['api/get-courses'] = array(
+    'page callback' => 'courses_page_callback',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
   return $items;
 }
 
@@ -441,6 +447,59 @@ function summary_page_callback() {
   else {
     http_response_code(401);
   }
+
+}
+
+
+/*
+ * This function is to get course details posted filtered by
+ * date range
+ */
+function courses_page_callback() {
+
+  $results = [];
+  $params = drupal_get_query_parameters();
+
+  $start_date =$params['start_date'];
+  $starttimestamp = strtotime($start_date.'00:00:00');
+
+  $end_date = $params['end_date'];
+  $endtimestamp = strtotime($end_date.'23:59:59');
+
+  $common=new common();
+  if($common->authenticate() == TRUE){
+
+      $query = db_select('node', 'n');
+      $query->join('node_expire', 'ne', 'n.nid=ne.nid');
+      $query->addField('n', 'nid', 'nid');
+      $query->addField('n', 'title', 'title');
+      $query->addField('n', 'created', 'created');
+      $query->addField('n', 'status', 'status');
+      $query->addField('ne', 'expire', 'expire');
+      $query->condition('type', 'course');
+      $query->condition('created', array($starttimestamp), '>=');
+      $query->condition('created', array($endtimestamp), '<=');
+      $data = $query->execute()->fetchAll();
+
+      foreach ($data as $row) {
+
+        $obj = [];
+        $obj['nid'] = $row->nid;
+        $obj['title'] = $row->title;
+        $obj['created'] = $row->created;
+        $obj['status'] = $row->status;
+        $obj['expire'] = $row->expire;
+        $obj['url'] = url("node/$row->nid");
+        array_push($results, $obj);
+
+      }
+      return drupal_json_output($results);
+      }
+
+  else {
+    http_response_code(401);
+  }
+
 
 }
 

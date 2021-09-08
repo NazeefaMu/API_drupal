@@ -108,9 +108,20 @@ class common {
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
+  $items['api/get-course-providers'] = array(
+    'page callback' => 'course_providers_page_callback',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
 
   $items['api/get-courses'] = array(
     'page callback' => 'courses_page_callback',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['api/get-inquires'] = array(
+    'page callback' => 'course_inquiry_page_callback',
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
@@ -450,6 +461,64 @@ function summary_page_callback() {
 
 }
 
+/*
+ * This function is to get all the course providers and details
+ */
+function course_providers_page_callback() {
+
+  $common=new common();
+
+  if($common->authenticate() == TRUE){
+
+
+    /*
+     * get employer ID's relevant to employer
+    */
+    $isEmployer = db_select('users_roles');
+    $isEmployer->addField('users_roles', 'uid');
+    $isEmployer->condition('rid', 5);
+    $providerID = $isEmployer->execute()->fetchCol();
+
+    /*
+     * employer Data
+    */
+    $query = db_select('users');
+    $query->addField('users', 'uid','uid');
+    $query->addField('users', 'name','name');
+    $query->addField('users', 'mail','mail');
+    $query->addField('users', 'picture','picture');
+    $query->condition('uid', $providerID);
+
+    $data = $query->execute()->fetchAll();
+    $response = [
+      'Providers' => []
+    ];
+
+    foreach ($data as $row) {
+
+      $file = file_load($row->picture);
+      $uri = $file->uri;
+      $url = file_create_url($uri);
+
+      $obj = [];
+      $obj['uid'] = $row->uid;
+      $obj['name'] = $row->name;
+      $obj['mail'] = $row->mail;
+      $obj['picture'] = $url;
+      array_push($response['Providers'], $obj);
+
+    }
+
+    return drupal_json_output($response);
+  }
+  else
+  {
+
+    http_response_code(401);
+
+  }
+
+}
 
 /*
  * This function is to get course details posted filtered by
@@ -459,6 +528,8 @@ function courses_page_callback() {
 
   $results = [];
   $params = drupal_get_query_parameters();
+  $provider_id = $params['provider_id'];
+
 
   $start_date =$params['start_date'];
   $starttimestamp = strtotime($start_date.'00:00:00');
@@ -476,6 +547,7 @@ function courses_page_callback() {
       $query->addField('n', 'created', 'created');
       $query->addField('n', 'status', 'status');
       $query->addField('ne', 'expire', 'expire');
+      $query->condition('n.uid', $provider_id);
       $query->condition('type', 'course');
       $query->condition('created', array($starttimestamp), '>=');
       $query->condition('created', array($endtimestamp), '<=');
@@ -500,6 +572,109 @@ function courses_page_callback() {
     http_response_code(401);
   }
 
+
+}
+
+/*
+ * This function is to get course inquiries
+ * filtered by date range by providing "course ID"
+*/
+function course_inquiry_page_callback() {
+  $results = [];
+  $params = drupal_get_query_parameters();
+  $course_id = $params['course_id'];
+
+  $start_date =$params['start_date'];
+  $starttimestamp = strtotime($start_date.'00:00:00');
+
+  $end_date = $params['end_date'];
+  $endtimestamp = strtotime($end_date.'23:59:59');
+
+  $common = new common();
+
+  if($common->authenticate() == TRUE){
+    if (isset($course_id)) {
+
+      /*
+       * Get application submissions
+       */
+      $query = db_select('webform_submitted_data');
+      $query->addField('webform_submitted_data', 'sid');
+      $query->condition('nid', '16122');
+      $query->condition('data', $course_id);
+      $query->condition('cid', '8');
+      $setofsid = $query->execute()->fetchAll();
+
+      /*
+       * Get taxonomy ID to identify the job industry
+       */
+      $query = db_select('field_data_field_course_category');
+      $query->addField('field_data_field_course_category', 'field_course_category_tid');
+      $query->condition('entity_id', $course_id);
+      $tid = $query->execute()->fetchAll();//get taxanomy ID
+
+      foreach ($tid as $tidValue) {
+
+        /*
+         * Get industry name based on taxanomy ID
+         */
+        $query2 = db_select('taxonomy_term_data');
+        $query2->addField('taxonomy_term_data', 'name');
+        $query2->condition('tid', $tidValue->field_industry_tid);
+        $result2 = $query2->execute()->fetchAll();
+      }
+
+
+      if ($setofsid) {
+
+        foreach ($setofsid as $sid) {
+          /*
+           * Get all data relevant to application based on submission ID
+           */
+          $querySubmissions = db_select('webform_submitted_data', 'wsd');
+          $querySubmissions->join('webform_submissions', 'sd', 'sd.sid=wsd.sid');
+          $querySubmissions->leftJoin('webform_component', 'wc', 'wsd.cid = wc.cid');
+          $querySubmissions->addField('wsd', 'data');
+          $querySubmissions->addField('wsd', 'sid');
+          $querySubmissions->addField('wc', 'name');
+          $querySubmissions->condition('wc.nid', '16122');
+          $querySubmissions->condition('wsd.sid', $sid->sid);
+          $querySubmissions->condition('sd.sid', $sid->sid);
+          $querySubmissions->condition('submitted', array($starttimestamp), '>=');
+          $querySubmissions->condition('submitted', array($endtimestamp), '<=');
+          $querySubmissions->groupBy('wsd.data');
+          $result = $querySubmissions->execute()->fetchAll();
+
+          foreach ($result as $row) {
+              $obj['id'] = $row->sid;
+              $obj[$row->name] = $row->data;
+              foreach ($result2 as $jobCategory){
+                $obj['job_category']=$jobCategory->name;
+              }
+          }
+          array_push($results, $obj);
+        }
+
+      }
+      if($obj == NULL)
+      {
+        $empty=[
+          "course_inquiry:"=>[]
+        ];
+        return drupal_json_output($empty);
+      }else
+      {
+        return drupal_json_output($results);
+      }
+
+    }
+    else {
+      http_response_code(412);
+    }
+  }
+  else {
+    http_response_code(401);
+  }
 
 }
 

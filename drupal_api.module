@@ -103,11 +103,13 @@ class common {
     'access arguments' => array('access administration pages'),
     'type' => MENU_NORMAL_ITEM,
   );
+
   $items['api/study-overseas-data'] = array(
     'page callback' => 'overseas_page_callback',
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
+
   $items['api/get-course-providers'] = array(
     'page callback' => 'course_providers_page_callback',
     'access callback' => TRUE,
@@ -222,8 +224,7 @@ function employer_page_callback() {
     foreach ($data as $row) {
 
       $file = file_load($row->picture);
-      $uri = $file->uri;
-      $url = file_create_url($uri);
+      $url = file_create_url($file->uri);
 
       $obj = [];
       $obj['uid'] = $row->uid;
@@ -761,17 +762,23 @@ function drupal_api_form($form, &$form_state) {
 
   $query = db_select('api_configuration');
   $query->addField('api_configuration', 'api_key');
-  $query->addField('api_configuration', 'nid');
-  $query->addField('api_configuration', 'rid');
-  $query->addField('api_configuration', 'cid');
-  $output = $query->execute()->fetchAll();
+  $query->addField('api_configuration', 'nid');//15
+  $query->addField('api_configuration', 'rid');//4
+  $query->addField('api_configuration', 'cid');//10
+  $query->addField('api_configuration', 'courses_nid');
+  $query->addField('api_configuration', 'courses_rid');
+  $query->addField('api_configuration', 'courses_cid');
 
+  $output = $query->execute()->fetchAll();
 
   foreach ($output as $result){
     $api_key=$result->api_key;
     $nid=$result->nid;
     $rid=$result->rid;
     $cid=$result->cid;
+    $courses_nid=$result->courses_nid;
+    $courses_rid=$result->courses_rid;
+    $courses_cid=$result->courses_cid;
 
   }
 
@@ -802,6 +809,30 @@ function drupal_api_form($form, &$form_state) {
     '#title' => t('CID'),
     '#default_value' => $cid,
     '#description' => t('CID for webform'),
+    '#required' => TRUE,
+  );
+
+  $form['form_course_nid'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Course NID'),
+    '#default_value' => $courses_nid,
+    '#description' => t('NID for course'),
+    '#required' => TRUE,
+  );
+
+  $form['form_course_rid'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Course RID'),
+    '#default_value' => $courses_rid,
+    '#description' => t('RID for course'),
+    '#required' => TRUE,
+  );
+
+  $form['form_course_cid'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Course CID'),
+    '#default_value' => $courses_cid,
+    '#description' => t('CID for course'),
     '#required' => TRUE,
   );
 
@@ -843,6 +874,10 @@ function drupal_api_form_submit($form, &$form_state) {
         'nid' => $form_state['values']['form_node_id'],
         'rid' => $form_state['values']['form_rid'],
         'cid' => $form_state['values']['form_cid'],
+        'courses_nid' => $form_state['values']['form_course_nid'],
+        'courses_rid' => $form_state['values']['form_course_rid'],
+        'courses_cid' => $form_state['values']['form_course_cid'],
+
       ])
       ->execute();
     drupal_set_message("Successfully inserted");
@@ -855,6 +890,10 @@ function drupal_api_form_submit($form, &$form_state) {
         'nid' => $form_state['values']['form_node_id'],
         'rid' => $form_state['values']['form_rid'],
         'cid' => $form_state['values']['form_cid'],
+        'courses_nid' => $form_state['values']['form_course_nid'],
+        'courses_rid' => $form_state['values']['form_course_rid'],
+        'courses_cid' => $form_state['values']['form_course_cid'],
+
       ])
       ->execute();
     drupal_set_message("Successfully updated");

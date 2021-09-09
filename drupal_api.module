@@ -8,6 +8,10 @@ class common {
   public $ridVal;
   public $nidVal;
   public $cidVal;
+  public $coursenidVal;
+  public $coursecidVal;
+  public $courseridVal;
+
 
   /*
    * Get Node ID containing webforms related to job
@@ -43,6 +47,42 @@ class common {
     $this->ridVal = $ridValOutput;
 
     return $this->ridVal;
+  }
+
+  /*
+   * Get Node ID containing webforms related to job
+  */
+  function get_course_nid() {
+    $query = db_select('api_configuration');
+    $query->addField('api_configuration', 'courses_nid');
+    $coursenidValOutput = $query->execute()->fetchField();
+    $this->coursenidVal = $coursenidValOutput;
+
+    return $this->coursenidVal;
+  }
+
+  /*
+  * Get content ID to identify application data
+  */
+  function get_course_cid() {
+    $query = db_select('api_configuration');
+    $query->addField('api_configuration', 'courses_cid');
+    $coursecidValOutput = $query->execute()->fetchField();
+    $this->coursecidVal = $coursecidValOutput;
+
+    return $this->coursecidVal;
+  }
+
+  /*
+* Get content ID to identify application data
+*/
+  function get_course_rid() {
+    $query = db_select('api_configuration');
+    $query->addField('api_configuration', 'courses_rid');
+    $courseridValOutput = $query->execute()->fetchField();
+    $this->courseridVal = $courseridValOutput;
+
+    return $this->courseridVal;
   }
 
   /*
@@ -477,7 +517,7 @@ function course_providers_page_callback() {
     */
     $isEmployer = db_select('users_roles');
     $isEmployer->addField('users_roles', 'uid');
-    $isEmployer->condition('rid', 5);
+    $isEmployer->condition('rid', $common->get_course_rid());
     $providerID = $isEmployer->execute()->fetchCol();
 
     /*
@@ -601,9 +641,9 @@ function course_inquiry_page_callback() {
        */
       $query = db_select('webform_submitted_data');
       $query->addField('webform_submitted_data', 'sid');
-      $query->condition('nid', '16122');
+      $query->condition('nid', $common->get_course_nid());
       $query->condition('data', $course_id);
-      $query->condition('cid', '8');
+      $query->condition('cid', $common->get_course_cid());
       $setofsid = $query->execute()->fetchAll();
 
       /*

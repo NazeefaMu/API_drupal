@@ -74,8 +74,8 @@ class common {
   }
 
   /*
-* Get content ID to identify application data
-*/
+  * Get content ID to identify application data
+  */
   function get_course_rid() {
     $query = db_select('api_configuration');
     $query->addField('api_configuration', 'courses_rid');
@@ -164,6 +164,12 @@ class common {
 
   $items['api/get-inquires'] = array(
     'page callback' => 'course_inquiry_page_callback',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['api/get-agents'] = array(
+    'page callback' => 'agent_page_callback',
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
@@ -665,9 +671,7 @@ function course_inquiry_page_callback() {
         $result2 = $query2->execute()->fetchAll();
       }
 
-
       if ($setofsid) {
-
         foreach ($setofsid as $sid) {
           /*
            * Get all data relevant to application based on submission ID
@@ -792,6 +796,58 @@ function overseas_page_callback() {
     http_response_code(401);
   }
 }
+
+
+
+function agent_page_callback() {
+
+  $common=new common();
+
+  if($common->authenticate() == TRUE){
+
+    /*
+     * get employer ID's relevant to employer
+    */
+    $isAgent = db_select('users_roles');
+    $isAgent->addField('users_roles', 'uid');
+    $isAgent->condition('rid', '7');
+    $agentID = $isAgent->execute()->fetchCol();
+
+    /*
+     * employer Data
+    */
+    $query = db_select('users');
+    $query->addField('users', 'uid','uid');
+    $query->addField('users', 'name','name');
+    $query->addField('users', 'mail','mail');
+    $query->condition('uid', $agentID);
+
+    $data = $query->execute()->fetchAll();
+    $response = [
+      'Agents' => []
+    ];
+
+    foreach ($data as $row) {
+
+      $obj = [];
+      $obj['uid'] = $row->uid;
+      $obj['name'] = $row->name;
+      $obj['mail'] = $row->mail;
+      array_push($response['Agents'], $obj);
+
+    }
+
+    return drupal_json_output($response);
+  }
+  else
+  {
+
+    http_response_code(401);
+
+  }
+
+}
+
 
 /**
  * Page callback: drupal api settings

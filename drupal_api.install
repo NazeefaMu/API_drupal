@@ -48,6 +48,18 @@ function drupal_api_schema() {
         'type' => 'int',
         'not null' => TRUE,
       ),
+
+      'migrate_nid' => array(
+        'description' => 'Migrate NID of overseas form',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+
+      'migrate_cid' => array(
+        'description' => 'Migrate NID of overseas form data',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
     ),
     'primary key' => array('id'),
   );

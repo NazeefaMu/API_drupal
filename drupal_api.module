@@ -11,6 +11,9 @@ class common {
   public $coursenidVal;
   public $coursecidVal;
   public $courseridVal;
+  public $migrateNidVal;
+  public $migrateCidVal;
+
 
 
   /*
@@ -21,7 +24,6 @@ class common {
     $query->addField('api_configuration', 'nid');
     $nidValOutput = $query->execute()->fetchField();
     $this->nidVal = $nidValOutput;
-
     return $this->nidVal;
   }
 
@@ -84,6 +86,30 @@ class common {
 
     return $this->courseridVal;
   }
+
+  /*
+ * Get Node ID containing webforms related to migration
+*/
+  function migrate_nid() {
+    $query = db_select('api_configuration');
+    $query->addField('api_configuration', 'migrate_nid');
+    $migrateNidValOutput = $query->execute()->fetchField();
+    $this->migrateNidVal = $migrateNidValOutput;
+
+    return $this->migrateNidVal;
+  }
+
+  /*
+  * Get content ID to identify migration form data
+  */
+    function migration_cid() {
+      $query = db_select('api_configuration');
+      $query->addField('api_configuration', 'migrate_cid');
+      $migrateCidValOutput = $query->execute()->fetchField();
+      $this->migrateCidVal = $migrateCidValOutput;
+
+      return $this->migrateCidVal;
+    }
 
   /*
    * Check if API key matches the key sent with request
@@ -730,25 +756,45 @@ function course_inquiry_page_callback() {
 */
 function overseas_page_callback() {
   $params = drupal_get_query_parameters();
-  $formid =$params['form_id'];
+  $agentid = $params['agent_id'];//17468
 
   $results=[];
-
   $common = new common();
 
   if($common->authenticate() == TRUE){
-    if (isset($formid)) {
+    if (isset($agentid)) {
 
-      /*
-       * Get overseas data submissions
-       */
       $query = db_select('webform_submitted_data');
       $query->addField('webform_submitted_data', 'sid');
-      $query->condition('nid', $formid);
+      $query->condition('nid', $common->migrate_nid());//17457
+      $query->condition('data', $agentid);
+      $query->condition('cid', $common->migration_cid());//30
       $setofsid = $query->distinct()->execute()->fetchAll();
+
+      /*
+       * Get taxonomy ID to identify the job industry
+       */
+      $query = db_select('field_data_field_industry');
+      $query->addField('field_data_field_industry', 'field_industry_tid');
+      $query->condition('entity_id', $agentid);
+      $tid = $query->execute()->fetchAll();//get taxanomy ID
+
+      foreach ($tid as $tidValue) {
+
+        /*
+         * Get industry name based on taxanomy ID
+         */
+        $query2 = db_select('taxonomy_term_data');
+        $query2->addField('taxonomy_term_data', 'name');
+        $query2->condition('tid', $tidValue->field_industry_tid);
+        $result2 = $query2->execute()->fetchAll();
+
+      }
 
       if ($setofsid) {
         foreach ($setofsid as $sid) {
+
+
           /*
            * Get all data relevant to application based on submission ID
            */
@@ -758,17 +804,19 @@ function overseas_page_callback() {
           $query->addField('wsd', 'data');
           $query->addField('wsd', 'sid');
           $query->addField('wc', 'name');
-          $query->condition('wc.nid', $formid);
+          $query->condition('wc.nid', 17457);
           $query->condition('wsd.sid', $sid->sid);
           $query->condition('sd.sid', $sid->sid);
           $query->groupBy('wsd.data');
           $result = $query->execute()->fetchAll();
+
 
           foreach ($result as $row)
           {
             if ($row->name == 'Attach your CV') {
               $file = file_load($row->data);
               $obj[$row->name] = file_create_url($file->uri);
+
             }
             else if($row->name != 'Attach your CV/t') {
               $obj['id'] = $row->sid;
@@ -861,9 +909,12 @@ function drupal_api_form($form, &$form_state) {
   $query->addField('api_configuration', 'nid');//15
   $query->addField('api_configuration', 'rid');//4
   $query->addField('api_configuration', 'cid');//10
-  $query->addField('api_configuration', 'courses_nid');
-  $query->addField('api_configuration', 'courses_rid');
-  $query->addField('api_configuration', 'courses_cid');
+  $query->addField('api_configuration', 'courses_nid');//16122
+  $query->addField('api_configuration', 'courses_rid');//5
+  $query->addField('api_configuration', 'courses_cid');//8
+  $query->addField('api_configuration', 'migrate_nid');//17457
+  $query->addField('api_configuration', 'migrate_cid');//30
+
 
   $output = $query->execute()->fetchAll();
 
@@ -875,6 +926,8 @@ function drupal_api_form($form, &$form_state) {
     $courses_nid=$result->courses_nid;
     $courses_rid=$result->courses_rid;
     $courses_cid=$result->courses_cid;
+    $migrate_nid=$result->migrate_nid;
+    $migrate_cid=$result->migrate_cid;
 
   }
 
@@ -932,6 +985,23 @@ function drupal_api_form($form, &$form_state) {
     '#required' => TRUE,
   );
 
+  $form['form_migrate_nid'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Migrate NID'),
+    '#default_value' => $migrate_nid,
+    '#description' => t('CID for course'),
+    '#required' => TRUE,
+  );
+
+  $form['form_migrate_cid'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Migrate CID'),
+    '#default_value' => $migrate_cid,
+    '#description' => t('CID for course'),
+    '#required' => TRUE,
+  );
+
+
   $form['submit_button'] = array(
     '#type' => 'submit',
     '#value' => t('Save'),
@@ -973,7 +1043,8 @@ function drupal_api_form_submit($form, &$form_state) {
         'courses_nid' => $form_state['values']['form_course_nid'],
         'courses_rid' => $form_state['values']['form_course_rid'],
         'courses_cid' => $form_state['values']['form_course_cid'],
-
+        'migrate_nid' => $form_state['values']['form_migrate_nid'],
+        'migrate_cid' => $form_state['values']['form_migrate_cid'],
       ])
       ->execute();
     drupal_set_message("Successfully inserted");
@@ -989,6 +1060,8 @@ function drupal_api_form_submit($form, &$form_state) {
         'courses_nid' => $form_state['values']['form_course_nid'],
         'courses_rid' => $form_state['values']['form_course_rid'],
         'courses_cid' => $form_state['values']['form_course_cid'],
+        'migrate_nid' => $form_state['values']['form_migrate_nid'],
+        'migrate_cid' => $form_state['values']['form_migrate_cid'],
 
       ])
       ->execute();
